@@ -3036,7 +3036,10 @@ static bool ds_print_meta_infos(RDisasmState *ds, ut8* buf, int len, int idx, in
 			ds->oplen = mi_size - delta;
 			core->print->flags &= ~R_PRINT_FLAGS_HEADER;
 			int size = mi_size;
-			if (!ds_print_data_type (ds, buf + idx, ds->hint? ds->hint->immbase: 0, size)) {
+			if (idx + 8 > len) {
+				size = 0;
+			}
+			if (size > 0 && !ds_print_data_type (ds, buf + idx, ds->hint? ds->hint->immbase: 0, size)) {
 				if (size > delta) {
 					r_cons_printf ("hex size=%d delta=%d\n", size , delta);
 					int remaining = size - delta;
@@ -6409,9 +6412,8 @@ toro:
 				//r_cons_printf (".data: %s\n", meta->str);
 				i += meta_size;
 				{
-					int idx = i;
 					ut64 at = core->offset + i;
-					int hexlen = nb_bytes - idx;
+					int hexlen = nb_bytes - i;
 					int delta = at - meta_start;
 					if (meta_size < hexlen) {
 						hexlen = meta_size;
@@ -6420,12 +6422,12 @@ toro:
 					core->print->flags &= ~R_PRINT_FLAGS_HEADER;
 					// TODO do not pass a copy in parameter buf that is possibly to small for this
 					// print operation
-					int size = R_MIN (meta_size, nb_bytes - idx);
+					int size = R_MIN (meta_size, nb_bytes - i);
 					RDisasmState ds = {0};
 					ds.core = core;
-					if (!ds_print_data_type (&ds, buf + i, 0, size)) {
+					if (size >= 8 && !ds_print_data_type (&ds, buf + i, 0, size)) {
 						r_cons_printf ("hex length=%d delta=%d\n", size, delta);
-						r_print_hexdump (core->print, at, buf + idx, hexlen - delta, 16, 1, 1);
+						r_print_hexdump (core->print, at, buf + i, hexlen - delta, 16, 1, 1);
 					} else {
 						r_cons_newline ();
 					}
